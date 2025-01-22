@@ -37,8 +37,9 @@ type YoutubeService struct {
 
 func NewYoutubeService(db *gorm.DB) *YoutubeService {
 	apiKeys := []string{
-		os.Getenv("API_KEY_1"),
-		os.Getenv("API_KEY_2"),
+		os.Getenv("YOUTUBE_API_KEY_1"),
+		os.Getenv("YOUTUBE_API_KEY_2"),
+		os.Getenv("YOUTUBE_API_KEY_3"),
 	}
 
 	return &YoutubeService{

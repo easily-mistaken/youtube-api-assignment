@@ -1,5 +1,4 @@
-# Stage 1: Build the Go binary
-FROM golang:1.23-alpine AS builder
+FROM golang:1.20-alpine AS builder
 
 # Install git for fetching dependencies
 RUN apk add --no-cache git
@@ -25,8 +24,10 @@ FROM alpine:latest
 # Set working directory
 WORKDIR /app
 
-# Copy the binary from builder
+# Copy the binary from builder stage
 COPY --from=builder /app/main .
+
+# Copy only the .env file (not the entire context)
 COPY .env .
 
 # Expose port 8080
