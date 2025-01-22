@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/easily-mistaken/youtube-api-assignment/pkg/models"
@@ -34,7 +35,9 @@ func StartPeriodicFetch(db *gorm.DB, client *Client, query string, interval time
 		
 		// Store videos in database
 		for _, video := range videos {
-			if err := db.Create(&video).Error; err != nil {
+			err := db.Create(&video).Error
+			
+			if !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 				fmt.Printf("Error storing video: %v\n", err)
 			}
 		}
@@ -54,7 +57,7 @@ func (c *Client) FetchVideos(query string) ([]models.Video, error) {
 	
 	if resp.StatusCode == 403 {
 		c.rotateKey()
-		return nil, fmt.Errorf("API quota exceeded")
+		return nil, fmt.Errorf(`API quota exceeded for key: %s`, apiKey)
 	}
 	
 	var result struct {

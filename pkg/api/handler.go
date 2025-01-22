@@ -18,29 +18,40 @@ func NewHandler(db *gorm.DB) *Handler {
 }
 
 func (h *Handler) GetVideos(c *gin.Context) {
-	var videos []models.Video
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	
-	query := h.db.Model(&models.Video{}).
-		Order("published_at DESC").
-		Scopes(paginate(c))
+	// Validate pagination parameters
+	if limit <= 0 {
+		limit = 10
+	}
+	if page <= 0 {
+		page = 1
+	}
+
+	var videos []models.Video
+	var total int64
+	
+	query := h.db.Model(&models.Video{}).Order("published_at DESC")
 		
+	// Apply channel filter if provided
 	if channel := c.Query("channel"); channel != "" {
 		query = query.Where("channel = ?", channel)
 	}
+
+	query.Count(&total)
 	
-	if err := query.Find(&videos).Error; err != nil {
+	// Apply pagination
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Find(&videos).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	
-	c.JSON(200, videos)
+	c.JSON(200, gin.H{
+		"page":   page,
+		"limit":  limit,
+		"total":  total,
+		"videos": videos,
+	})
 }
-
-func paginate(c *gin.Context) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-		pageSize, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
-		offset := (page - 1) * pageSize
-		return db.Offset(offset).Limit(pageSize)
-	}
-} 
