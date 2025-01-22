@@ -1,34 +1,39 @@
 package main
 
 import (
-    "log"
-    "os"
-    "time"
+	"os"
+	"time"
 
-    "github.com/gin-gonic/gin"
-    "github.com/easily-mistaken/youtube-api-assignment/internal/youtube"
-    "github.com/easily-mistaken/youtube-api-assignment/internal/worker"
+	"github.com/easily-mistaken/youtube-api-assignment/pkg/api"
+	"github.com/easily-mistaken/youtube-api-assignment/pkg/database"
+	"github.com/easily-mistaken/youtube-api-assignment/pkg/youtube"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-    // Initialize Gin
-    r := gin.Default()
+	// Initialize database
+	db := database.Connect()
+	
+	// Create YouTube client with multiple API keys
+	ytClient := youtube.NewClient([]string{
+		os.Getenv("YOUTUBE_API_KEY_1"),
+		os.Getenv("YOUTUBE_API_KEY_2"),
+	})
 
-    // Basic health check
-    r.GET("/ping", func(c *gin.Context) {
-        c.JSON(200, gin.H{
-            "message": "pong",
-        })
-    })
+	// Start background fetcher with configurable interval
+	fetchInterval := 10 * time.Second
+	query := os.Getenv("YOUTUBE_SEARCH_QUERY")
+	
+	go youtube.StartPeriodicFetch(db, ytClient, query, fetchInterval)
 
-    // Initialize YouTube client
-    apiKeys := []string{os.Getenv("YOUTUBE_API_KEY")}
-    youtubeClient := youtube.NewClient(apiKeys)
+	// Setup HTTP server
+	router := gin.Default()
+	handler := api.NewHandler(db)
+	
+	// Register routes
+	api.RegisterRoutes(router, handler)
 
-    // Initialize fetcher
-    fetcher := worker.NewVideoFetcher(youtubeClient, 10*time.Second, "golang")
-    fetcher.Start()
-
-    // Start server
-    log.Fatal(r.Run(":8080"))
+	// Start server
+	router.Run(":8080")
 }
