@@ -30,6 +30,7 @@ func (h *Handler) GetVideos(c *gin.Context) {
 	}
 
 	var videos []models.Video
+	var total int64
 	
 	query := h.db.Model(&models.Video{}).Order("published_at DESC")
 		
@@ -37,6 +38,8 @@ func (h *Handler) GetVideos(c *gin.Context) {
 	if channel := c.Query("channel"); channel != "" {
 		query = query.Where("channel = ?", channel)
 	}
+
+	query.Count(&total)
 	
 	// Apply pagination
 	offset := (page - 1) * limit
@@ -44,10 +47,16 @@ func (h *Handler) GetVideos(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Assign sequential IDs based on page and limit
+	for i := range videos {
+		videos[i].ID = uint((page-1)*limit + i + 1)
+	}
 	
 	c.JSON(200, gin.H{
 		"page":   page,
 		"limit":  limit,
+		"total":  total,
 		"videos": videos,
 	})
 }

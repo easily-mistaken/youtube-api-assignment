@@ -5,7 +5,7 @@ import (
 )
 
 type Video struct {
-	ID          uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	ID          uint      `json:"id"`
 	Title        string    `json:"title"`
 	Description  string    `json:"description"`
 	PublishedAt  time.Time `gorm:"index" json:"publishedAt"`
