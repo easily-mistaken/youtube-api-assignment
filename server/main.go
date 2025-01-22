@@ -6,7 +6,7 @@ import (
 
 	"github.com/easily-mistaken/youtube-api-assignment/pkg/api"
 	"github.com/easily-mistaken/youtube-api-assignment/pkg/database"
-	"github.com/easily-mistaken/youtube-api-assignment/pkg/youtube"
+	"github.com/easily-mistaken/youtube-api-assignment/pkg/services"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -15,15 +15,22 @@ import (
 func main() {
 	db := database.Connect()
 	
-	ytClient := youtube.NewClient([]string{
-		os.Getenv("YOUTUBE_API_KEY_1"),
-		os.Getenv("YOUTUBE_API_KEY_2"),
-	})
+	ytService := services.NewYoutubeService(db)
 
 	fetchInterval := 10 * time.Second
 	query := os.Getenv("YOUTUBE_SEARCH_QUERY")
 	
-	go youtube.StartPeriodicFetch(db, ytClient, query, fetchInterval)
+	// Start periodic fetch in a goroutine
+	go func() {
+		for {
+			_, err := ytService.FetchVideos(query)
+			if err != nil {
+				// Log error but continue
+				println("Error fetching videos:", err.Error())
+			}
+			time.Sleep(fetchInterval)
+		}
+	}()
 
 	router := gin.Default()
 
@@ -36,7 +43,6 @@ func main() {
 	}))
 
 	handler := api.NewHandler(db)
-
 	api.RegisterRoutes(router, handler)
 
 	router.Run(":8080")
