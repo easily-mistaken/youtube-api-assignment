@@ -127,6 +127,6 @@ This project is licensed under the MIT License.
             "channel": "AB Cricinfo"
         }
     ]
-}```
+}
 
 ````
